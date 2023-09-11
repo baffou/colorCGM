@@ -25,28 +25,38 @@ RefR0 = colorInterpolation(Ref,'r');
 [ItfR, ItfG] = crosstalkCorrection(ItfR0,ItfG0);
 [RefR, RefG] = crosstalkCorrection(RefR0,RefG0);
 
-[OPD, ~, ~, ~, crops] = CGMprocess(ItfR, RefR,'Gamma',Gamma, ...
-                                'distance',d,'dxSize',p,'zoom',Z, ...
-                                 'method','accurate');
-[~, T] = CGMprocess(ItfG, RefG,'Gamma',Gamma, ...
-                                'distance',d,'dxSize',p,'zoom',Z, ...
-                                 'method','accurate','crops',crops,'Tnormalisation','subtraction');
+[OPD, T, DWx, DWy] = CGMprocessManual(ItfR, RefR,'Gamma',Gamma, ...
+                                'distance',d,'dxSize',p,'zoom',Z);
+
+[OPD, T, DWx, DWy,crops] = CGMprocessManual(ItfR, RefR,'Gamma',Gamma, ...
+                                'distance',d,'dxSize',p,'zoom',Z,'crops',crops);
 
 %% Plot the results
-
 figure
-ax1 = subplot(1,2,1);
-imagesc(T)
+ax1=subplot(2,2,1);
+imagesc(Itf)
 set(gca,'DataAspectRatio',[1,1,1])
 colorbar
-title('fluorescence')
-ax2 = subplot(1,2,2);
+title('interferogram')
+ax2=subplot(2,2,2);
 imagesc(OPD)
 set(gca,'DataAspectRatio',[1,1,1])
 colorbar
 %clim([-4 1]*1e-9)
 title('OPD')
-linkaxes([ax1,ax2])
+ax3=subplot(2,2,3);
+imagesc(DWx)
+set(gca,'DataAspectRatio',[1,1,1])
+colorbar
+colormap(gca,'Gray')
+title('OPD gradient along x')
+ax4=subplot(2,2,4);
+imagesc(DWy)
+set(gca,'DataAspectRatio',[1,1,1])
+colorbar
+colormap(gca,'Gray')
+title('OPD gradient along y')
+linkaxes([ax1,ax2,ax3,ax4])
 zoom on
 
 
