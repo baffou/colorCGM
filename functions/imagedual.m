@@ -1,9 +1,9 @@
-function imagedual(OPD, Fluo, opt)
+function mixedImage = imagedual(OPD, Fluo, opt)
 arguments
     OPD
     Fluo
-    opt.minOPD (1,1) double = -20
-    opt.maxOPD (1,1) double = 200
+    opt.minOPD  (1,1) double = -20
+    opt.maxOPD  (1,1) double = 200
     opt.minFluo (1,1) double = 0
     opt.maxFluo (1,1) double = max(Fluo(:))
     opt.sigmaHP = 40   % HP filter for the OPD image
@@ -13,7 +13,7 @@ end
 % OPD: OPD image
 % fluo: fluorescence image
 
-if sum(size(OPD)~=size(Fluo)) M % if the two images do not have the same size
+if sum(size(OPD)~=size(Fluo)) % if the two images do not have the same size
     error('the two inputs must have the same size')
 end
 
@@ -44,12 +44,18 @@ colormapFLUO(:,2) = linspace(0,1,256);
 
 RGB_composite = composite_inversed(imOPD_hp,Fluo, colormapOPD, colormapFLUO);
 
-figure,
-image(RGB_composite)
-axis image
+if nargout
+    mixedImage = RGB_composite;
+else
+
+    figure,
+    image(RGB_composite)
+    axis image
+
+end
 
     function im = applyLimitsToImage(im,lim)
-        % leveling of the image with max and min values
+        % leveling of the image with min and max values
         idx = im < lim(1);
         im(idx) = lim(1);
         idx = im > lim(2);
@@ -57,20 +63,19 @@ axis image
     end
 
     function RGB_composite = composite_inversed(IM1, IM2, LUT1, LUT2)
-        RGB_composite = uint8(zeros(size(IM1,1), size(IM1,2), 3));
+        RGB_composite = uint8(zeros([size(IM1), 3]));
         IM1 = uint8(255*normalisationImage(IM1));
         IM2 = uint8(255*normalisationImage(IM2));
-        for x = 1:size(RGB_composite,1)
-            for y = 1:size(RGB_composite,2)
-                RGB1 = uint8(LUT1(IM1(x,y)+1,:) * 255);
-                RGB2 = uint8(LUT2(IM2(x,y)+1,:) * 255);
+        
+        RGB1 = uint8(LUT1(IM1+1,:) * 255);
+        RGB2 = uint8(LUT2(IM2+1,:) * 255);
 
-                color = 255 - (RGB1 + RGB2);
-                color = [color(2) color(1) color(2)];
-
-                RGB_composite(x,y,:) = color;
-            end
-        end
+        color1 = 255 - (reshape(RGB1(:,1),size(IM1)) + reshape(RGB2(:,1),size(IM2)));
+        color2 = 255 - (reshape(RGB1(:,2),size(IM1)) + reshape(RGB2(:,2),size(IM2)));
+        
+        RGB_composite(:,:,1) = color2;
+        RGB_composite(:,:,2) = color1;
+        RGB_composite(:,:,3) = color2;
 
 
     end
