@@ -7,6 +7,8 @@ arguments
     opt.minFluo (1,1) double = 0
     opt.maxFluo (1,1) double = max(Fluo(:))
     opt.sigmaHP = 40   % HP filter for the OPD image
+    opt.invLUT_OPD = false % invert the first lut
+    opt.invLUT_Fluo = false % invert the second lut
 end
 
 
@@ -40,9 +42,13 @@ Fluo = applyLimitsToImage(Fluo,fluo_clim);
 % Create the RGB mixed image
 colormapOPD = (gray(256));
 colormapFLUO = zeros(256,3);
-colormapFLUO(:,2) = linspace(0,1,256);
+colormapFLUO(:,2) = linspace(0,1,256)*0.5;
 
-RGB_composite = composite_inversed(imOPD_hp,Fluo, colormapOPD, colormapFLUO,'min1',opt.minOPD,'max1', opt.maxOPD,'min2',opt.minFluo,'max2', opt.maxFluo);
+RGB_composite = composite_inversed(imOPD_hp,Fluo, colormapOPD, colormapFLUO, ...
+    'min1',opt.minOPD,'max1', opt.maxOPD, ...
+    'min2',opt.minFluo,'max2', opt.maxFluo, ...
+    'inv1',opt.invLUT_OPD, ...
+    'inv2',opt.invLUT_Fluo);
 
 if nargout
     mixedImage = RGB_composite;
@@ -76,7 +82,16 @@ function RGB_composite = composite_inversed(IM1, IM2, LUT1, LUT2,opt)
         opt.max1
         opt.min2
         opt.max2
+        opt.inv1 = false % invert the first lut
+        opt.inv2 = false % invert the second lut
     end
+    if opt.inv1
+        LUT1 = flipud(LUT1);
+    end
+    if opt.inv2
+        LUT2 = flipud(LUT2);
+    end
+    
     RGB_composite = uint8(zeros([size(IM1), 3]));
     IM1 = uint8(255*normalisationImage(IM1,min=opt.min1,max=opt.max1));
     IM2 = uint8(255*normalisationImage(IM2,min=opt.min2,max=opt.max2));
