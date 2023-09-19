@@ -9,6 +9,7 @@ arguments
     opt.sigmaHP = 40   % HP filter for the OPD image
     opt.invLUT_OPD = false % invert the first lut
     opt.invLUT_Fluo = false % invert the second lut
+    opt.thresh = 0 % activate the second method that uses one LUT or the other, not a mix of both
 end
 
 
@@ -42,13 +43,14 @@ Fluo = applyLimitsToImage(Fluo,fluo_clim);
 % Create the RGB mixed image
 colormapOPD = (gray(256));
 colormapFLUO = zeros(256,3);
-colormapFLUO(:,2) = linspace(0,1,256)*0.5;
+colormapFLUO(:,2) = linspace(0,1,256);
 
 RGB_composite = composite_inversed(imOPD_hp,Fluo, colormapOPD, colormapFLUO, ...
     'min1',opt.minOPD,'max1', opt.maxOPD, ...
     'min2',opt.minFluo,'max2', opt.maxFluo, ...
     'inv1',opt.invLUT_OPD, ...
-    'inv2',opt.invLUT_Fluo);
+    'inv2',opt.invLUT_Fluo, ...
+    'thresh',opt.thresh);
 
 if nargout
     mixedImage = RGB_composite;
@@ -84,7 +86,9 @@ function RGB_composite = composite_inversed(IM1, IM2, LUT1, LUT2,opt)
         opt.max2
         opt.inv1 = false % invert the first lut
         opt.inv2 = false % invert the second lut
+        opt.thresh = 256/2 % 
     end
+    LUT2 = sqrt(LUT2);
     if opt.inv1
         LUT1 = flipud(LUT1);
     end
@@ -96,16 +100,31 @@ function RGB_composite = composite_inversed(IM1, IM2, LUT1, LUT2,opt)
     IM1 = uint8(255*normalisationImage(IM1,min=opt.min1,max=opt.max1));
     IM2 = uint8(255*normalisationImage(IM2,min=opt.min2,max=opt.max2));
     
-    RGB1 = uint8(LUT1(IM1+1,:) * 255);
-    RGB2 = uint8(LUT2(IM2+1,:) * 255);
+    RGB1 = uint8(LUT1(IM1+1,:) * 255); % OPD
+    RGB2 = uint8(LUT2(IM2+1,:) * 255); % Fluo
 
-    color1 = 255 - (reshape(RGB1(:,1),size(IM1)) + reshape(RGB2(:,1),size(IM2)));
-    color2 = 255 - (reshape(RGB1(:,2),size(IM1)) + reshape(RGB2(:,2),size(IM2)));
-    
-    RGB_composite(:,:,1) = color2;
-    RGB_composite(:,:,2) = color1;
-    RGB_composite(:,:,3) = color2;
+    if opt.thresh == 0 % no threshold, mixes the two LUT
+        color1 = 255 - (reshape(RGB1(:,1),size(IM1)) + reshape(RGB2(:,1),size(IM2)));
+        color2 = 255 - (reshape(RGB1(:,2),size(IM1)) + reshape(RGB2(:,2),size(IM2)));
+        
+        % remove fluo on the red and blue channels to make green channel greener
+        RGB_composite(:,:,1) = color2;
+        RGB_composite(:,:,2) = color1;
+        RGB_composite(:,:,3) = color2;
+    else % 2nd method: applies one LUT or the other as a function of the threshold
+        W1 = RGB1(:,1);
+        W2 = RGB1(:,2);
+        W3 = RGB1(:,3);
 
+        F2 = RGB2(:,2);
+        F2 = RGB2(:,2);
+
+        maskF = RGB2(:,2)>opt.thresh;
+
+        RGB_composite(:,:,1) = reshape(W1.*uint8(~maskF), size(IM1));
+        RGB_composite(:,:,2) = reshape(W2.*uint8(~maskF)+F2.*uint8(maskF), size(IM1));
+        RGB_composite(:,:,3) = reshape(W3.*uint8(~maskF), size(IM1));
+    end        
 
 end
 
